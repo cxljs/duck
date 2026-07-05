@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -18,19 +19,11 @@ func loadSettings() (baseURL, apiKey, model string) {
 
 	readSettingsFile(".claude/settings.json", &baseURL, &apiKey, &model)
 
-	if v := os.Getenv("ANTHROPIC_BASE_URL"); v != "" {
-		baseURL = v
-	}
-	if v := os.Getenv("ANTHROPIC_AUTH_TOKEN"); v != "" {
-		apiKey = v
-	}
-	if v := os.Getenv("ANTHROPIC_MODEL"); v != "" {
-		model = v
-	}
-
-	if model == "" {
-		model = string(anthropic.ModelClaudeOpus4_8)
-	}
+	// cmp.Or returns the first non-empty value, so env vars override the
+	// settings files and the built-in model is the last-resort default.
+	baseURL = cmp.Or(os.Getenv("ANTHROPIC_BASE_URL"), baseURL)
+	apiKey = cmp.Or(os.Getenv("ANTHROPIC_AUTH_TOKEN"), apiKey)
+	model = cmp.Or(os.Getenv("ANTHROPIC_MODEL"), model, string(anthropic.ModelClaudeOpus4_8))
 
 	return baseURL, apiKey, model
 }

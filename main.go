@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"slices"
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
@@ -132,28 +133,22 @@ func (a *Agent) Run(ctx context.Context) error {
 }
 
 func (a *Agent) runInference(ctx context.Context, conversation []anthropic.MessageParam) (*anthropic.Message, error) {
-	message, err := a.client.Messages.New(ctx, anthropic.MessageNewParams{
+	return a.client.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     a.model,
 		MaxTokens: int64(1024),
 		Messages:  conversation,
 		Tools:     a.toolParams,
 	})
-	return message, err
 }
 
 func (a *Agent) executeTool(id, name string, input json.RawMessage) anthropic.ContentBlockParamUnion {
-	var toolDef ToolDefinition
-	found := false
-	for _, tool := range a.tools {
-		if tool.Name == name {
-			toolDef = tool
-			found = true
-			break
-		}
-	}
-	if !found {
+	idx := slices.IndexFunc(a.tools, func(tool ToolDefinition) bool {
+		return tool.Name == name
+	})
+	if idx < 0 {
 		return anthropic.NewToolResultBlock(id, "tool not found", true)
 	}
+	toolDef := a.tools[idx]
 
 	fmt.Printf("\x1b[92mtool\x1b[0m: %s(%s)\n", name, input)
 	response, err := toolDef.Function(input)

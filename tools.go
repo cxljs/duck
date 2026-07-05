@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -92,7 +94,7 @@ func ListFiles(input json.RawMessage) (string, error) {
 	}
 
 	var files []string
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -103,7 +105,7 @@ func ListFiles(input json.RawMessage) (string, error) {
 		}
 
 		if relPath != "." {
-			if info.IsDir() {
+			if d.IsDir() {
 				files = append(files, relPath+"/")
 			} else {
 				files = append(files, relPath)
@@ -156,14 +158,14 @@ func EditFile(input json.RawMessage) (string, error) {
 
 	content, err := os.ReadFile(editFileInput.Path)
 	if err != nil {
-		if os.IsNotExist(err) && editFileInput.OldStr == "" {
+		if errors.Is(err, os.ErrNotExist) && editFileInput.OldStr == "" {
 			return createNewFile(editFileInput.Path, editFileInput.NewStr)
 		}
 		return "", err
 	}
 
 	oldContent := string(content)
-	newContent := strings.Replace(oldContent, editFileInput.OldStr, editFileInput.NewStr, -1)
+	newContent := strings.ReplaceAll(oldContent, editFileInput.OldStr, editFileInput.NewStr)
 
 	if oldContent == newContent && editFileInput.OldStr != "" {
 		return "", fmt.Errorf("old_str not found in file")
@@ -211,10 +213,7 @@ func Bash(input json.RawMessage) (string, error) {
 	// end of what most shells consider "reasonable" for an interactive task.
 	timeout := 30 * time.Second
 	if bashInput.TimeoutMs > 0 {
-		timeout = time.Duration(bashInput.TimeoutMs) * time.Millisecond
-		if max := 10 * time.Minute; timeout > max {
-			timeout = max
-		}
+		timeout = min(time.Duration(bashInput.TimeoutMs)*time.Millisecond, 10*time.Minute)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -227,7 +226,7 @@ func Bash(input json.RawMessage) (string, error) {
 	// and separating the two streams would lose interleaving order.
 	out, runErr := cmd.CombinedOutput()
 
-	if ctx.Err() == context.DeadlineExceeded {
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return string(out), fmt.Errorf("command timed out after %s", timeout)
 	}
 	if runErr != nil {
