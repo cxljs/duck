@@ -3,7 +3,7 @@
 ## Style
 
 - Always run `gofmt` and `make test` before committing.
-- Comments should explain why we are doing something, not just what we are doing. what commands are almost never usful.
+- Internal comments should explain why we are doing something, not just what we are doing. what comments are almost never usful, unless the block that follows is complex.
 
 ## Testing
 
