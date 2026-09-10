@@ -4,7 +4,7 @@ go 1.25.3
 
 require (
 	github.com/anthropics/anthropic-sdk-go v1.46.0
-	github.com/chzyer/readline v1.5.1
+	github.com/ergochat/readline v0.1.3
 	github.com/invopop/jsonschema v0.13.0
 	github.com/stretchr/testify v1.11.1
 )
@@ -23,5 +23,6 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
